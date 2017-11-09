@@ -3,111 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace LeverageRECalculator
 {
-    public class Asset : ICloneable
-    {
-        public string Name;
-        public double Cost;
-        public double DownPayment;
-        public double ReturnPerYear;
-        public int LeasePeriod, LeasePassed;
-        public double AppreciationPerYear;
-        public double Interest;
-        public double PrincipalDebt, InterestDebt;
-        public double Equity;
-        public DateTime Acquired;
-        public Asset(string name, double cost, double down, int years, double appreciation, double interest, double rpy)
-        {
-            this.Name = name;
-            this.Cost = cost;
-            this.DownPayment = down;
-            this.LeasePeriod = years;
-            this.AppreciationPerYear = appreciation;
-            this.Interest = interest;
-            this.ReturnPerYear = rpy;
-        }
-
-        Asset()
-        {
-
-        }
-
-        private TimeSpan timePassedSinceAcquisition
-        {
-            get
-            {
-                return Program.Now - this.Acquired;
-            }
-        }
-
-
-        public double Value
-        {
-            get
-            {
-                return (Cost) * (Math.Pow(1 + AppreciationPerYear, timePassedSinceAcquisition.TotalDays / 365));
-            }
-        }
-
-        public double PeriodicPayment(int payments)
-        {
-            if (payments == 0 || LeasePeriod == 0)
-                return 0;
-            double p = Cost - DownPayment;
-
-            double j = Interest / (payments / LeasePeriod);
-            double toThePower = Math.Pow((1 + j), -payments);
-
-            double numitor = 1 - toThePower;
-            double quotient = j / numitor;
-
-            return p * quotient;
-        }
-
-        public double InitialTotalDebt
-        {
-            get
-            {
-                return LeasePeriod * PeriodicPayment(LeasePeriod);
-            }
-        }
-
-        public double OutstDebt
-        {
-            get
-            {
-                return PrincipalDebt + InterestDebt;
-            }
-        }
-
-        public double NetValue
-        {
-            get
-            {
-                return Value - OutstDebt;
-            }
-        }
-
-        public object Clone()
-        {
-            Asset asset = new Asset();
-            asset.Name = this.Name;
-            asset.Cost = this.Cost;
-            asset.DownPayment = this.DownPayment;
-            asset.ReturnPerYear = this.ReturnPerYear;
-            asset.LeasePeriod = this.LeasePeriod;
-            asset.LeasePassed = 0;
-            asset.AppreciationPerYear = this.AppreciationPerYear;
-            asset.Interest = this.Interest;
-            asset.InterestDebt = 0;
-            asset.Equity = 0;
-
-            return asset;
-        }
-    }
-
     public class Program
     {
         static Asset CreateAsset()
@@ -120,12 +20,16 @@ namespace LeverageRECalculator
             double downPayment = ReadDouble();
             Console.Write("Years of lease: ");
             int leasePeriod = ReadValue();
-            Console.Write("Appreciation per year (for 10%, write 0.1): ");
+            Console.Write("Appreciation per year (for 2%, write 0.02): ");
             double app = ReadDouble();
-            Console.Write("Interest for mortgage (10% => 0.1): ");
+            Console.Write("Interest for mortgage (5% => 0.05): ");
             double interest = ReadDouble();
             Console.Write("Return per year (rent; standard is 0.07): ");
             double rpy = ReadDouble();
+
+            Console.Write("Confirmation: ");
+            if (Console.ReadLine() == "no")
+                return null;
 
             return new Asset(name, cost, downPayment, leasePeriod, app, interest, rpy);
         }
@@ -160,7 +64,7 @@ namespace LeverageRECalculator
             ReadPresetAssets();
 
             Console.Write("\nStarting with: ", FormatCash(Cash));
-            Cash = ReadValue();
+            Cash = ReadDouble();
             System.Console.WriteLine("\n\n");
 
             /*
@@ -204,7 +108,7 @@ namespace LeverageRECalculator
                 {
                     Asset type = PresetAssets[KeyNow];
                     Asset myAsset = type.Clone() as Asset;
-                    myAsset.Name = string.Format(myAsset.Name, Assets.Count + 1);
+                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
                     BuyAsset(myAsset);
                 }
                 else if (line.StartsWith(";"))
@@ -220,13 +124,16 @@ namespace LeverageRECalculator
                             else break;
                         }
                         Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Assets.Count + 1);
+                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
                         BuyAsset(myAsset);
                     }
                 }
                 else if (line == "c")
                 {
                     Asset newB = CreateAsset();
+                    if (newB == null)
+                        continue;
+                    
                     BuyAsset(newB);
                 }
                 else if (line == "t")
@@ -237,7 +144,7 @@ namespace LeverageRECalculator
                     if (PresetAssets.TryGetValue(line, out type))
                     {
                         Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Assets.Count + 1);
+                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
                         BuyAsset(myAsset);
                         KeyNow = line;
                     }
@@ -278,15 +185,20 @@ namespace LeverageRECalculator
                             double debt = asset.OutstDebt;
                             double value_ = asset.Value;
                             double balance = -debt + value_;
-                            Receive(value_, "Sold asset " + asset.Name + " for " + FormatCash(value_));
+                            Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
                             Pay(debt, "Paid off debt of " + FormatCash(debt));
-                            Console.WriteLine("Balance: {0}", FormatCash(balance));
+                            Console.WriteLine("\tBalance: {0}", FormatCash(balance));
                             // TODO BALANCE VS PROFIT ?
                             totalBalance += balance;
                         }
                         Assets.Clear();
                         Console.WriteLine("\n\n\t Total Balance: {0}", FormatCash(totalBalance));
                     }
+                }
+                else if (line == "sell range")
+                {
+                    if (!SellRange())
+                        continue;
                 }
                 else if (line == "t?")
                 {
@@ -321,6 +233,59 @@ namespace LeverageRECalculator
 
             Console.WriteLine("\n\n\nPress Enter to pass another year");
             Console.ReadLine();
+        }
+
+        static bool SellRange() {
+            try
+            {
+                Console.Write("Start index: ");
+                int start = ReadValue();
+                Console.Write("End index: ");
+                int end = ReadValue();
+                if (start < 0 || start > end || end > Assets.Count)
+                    return false;
+                var removing = Assets.Where(asset =>
+                {
+                    // cla x-1
+                    // 123456
+                    // 012345
+                    string str = new string(asset.Name.Skip(asset.Name.LastIndexOf('-') + 1).ToArray());
+                    int id = int.Parse(str);
+                    return start <= id && end >= id;
+                });
+                double totalBalance = 0;
+                int sold = 0, rc = 0;
+                foreach (var asset in removing)
+                {
+                    double debt = asset.OutstDebt;
+                    double value_ = asset.Value;
+                    double balance = -debt + value_;
+                    Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
+                    Pay(debt, "Paid off debt of " + FormatCash(debt));
+                    Console.WriteLine("\tBalance: {0}", FormatCash(balance));
+                    totalBalance += balance;
+                    sold++;
+                }
+                Stopwatch sw = Stopwatch.StartNew();
+                Assets.RemoveAll(a =>
+                {
+                    if (rc == sold)
+                        // this makes sure we don't perform unnecessary checks, if all that should have been sold are sold
+                        // we used to spend minutes here when the list was long
+                        return false;
+                    bool willRemove = removing.Contains(a);
+                    rc = willRemove ? rc + 1 : rc;
+                    return willRemove;
+                });
+                sw.Stop();
+                Console.WriteLine("\n\n\tSold {0} assets for {1}\nTime needed: {2:F2} seconds", sold, FormatCash(totalBalance), sw.Elapsed.TotalSeconds);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return false;
+            }
         }
 
         static string IVTXT = "";
@@ -372,8 +337,8 @@ namespace LeverageRECalculator
             {
                 Console.WriteLine("iv.txt does not exist");
                 Console.WriteLine("Adding classic building");
-                PresetAssets.Add("X1", new Asset("Bloc X1-{0}", 150000, 40000, 20, 0.03, 0.075, 0.07));
-                str.AppendLine("X1|Bloc X1-{0}|150000|40000|20|0.03|0.075|0.07");
+                PresetAssets.Add("X1", new Asset("Bloc X1-{0}", 150000, 40000, 30, 0.03, 0.045, 0.07));
+                str.AppendLine("X1|Bloc X1-{0}|150000|40000|30|0.03|0.045|0.07");
             }
             IVTXT = str.ToString();
         }
@@ -500,6 +465,8 @@ namespace LeverageRECalculator
 				asset.InterestDebt = (asset.Cost - asset.DownPayment) * asset.Interest;
 				asset.Acquired = Now;
 				*/
+
+                Asset.ODO++;
             }
             else Console.WriteLine("Not enough money");
         }
