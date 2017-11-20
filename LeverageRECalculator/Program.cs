@@ -86,8 +86,7 @@ namespace LeverageRECalculator
         {
             PassTime(TimeSpan.FromDays(365));
 
-            double deltaA = AssetsValue - LastYearAssets, deltaL = LiabilitiesValue - LastYearLiabilities, deltaNW = Cash + deltaA - deltaL;
-
+	    double deltaA = AssetsValue - LastYearAssets, deltaL = LiabilitiesValue - LastYearLiabilities, deltaNW = (Cash + AssetsValue - LiabilitiesValue) - LastYearNetWorth;
             Console.WriteLine("\nTime is {1}={0:F0} years", (Now - Start).TotalDays / 365, 'Δ');
             Console.WriteLine("Cash in bank: {0}", FormatCash(Cash));
             Console.WriteLine("  Assets: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(AssetsValue).PadLeft(24, ' '), deltaA >= 0 ? "+" : "", FormatCash(deltaA), AssetsValue / LastYearAssets * 100 - 100);
