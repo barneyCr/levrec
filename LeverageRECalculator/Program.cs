@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -44,6 +44,9 @@ namespace LeverageRECalculator
         public static double LastYearLiabilities = 1;
         public static double LastYearNetWorth = 1;
 
+        public static bool ShowTransactionsOutput = true;
+        public static bool ShowTimerOutput = false;
+
         public static double AssetsValue
         {
             get
@@ -84,9 +87,15 @@ namespace LeverageRECalculator
 
         private static void ApplicationAction()
         {
+            Stopwatch timer = null;
+            if (Program.ShowTimerOutput)
+            {
+                Console.WriteLine("Routine starting");
+                timer = Stopwatch.StartNew();
+            }
             PassTime(TimeSpan.FromDays(365));
 
-	    double deltaA = AssetsValue - LastYearAssets, deltaL = LiabilitiesValue - LastYearLiabilities, deltaNW = (Cash + AssetsValue - LiabilitiesValue) - LastYearNetWorth;
+            double deltaA = AssetsValue - LastYearAssets, deltaL = LiabilitiesValue - LastYearLiabilities, deltaNW = (Cash + AssetsValue - LiabilitiesValue) - LastYearNetWorth;
             Console.WriteLine("\nTime is {1}={0:F0} years", (Now - Start).TotalDays / 365, 'Δ');
             Console.WriteLine("Cash in bank: {0}", FormatCash(Cash));
             Console.WriteLine("  Assets: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(AssetsValue).PadLeft(24, ' '), deltaA >= 0 ? "+" : "", FormatCash(deltaA), AssetsValue / LastYearAssets * 100 - 100);
@@ -98,6 +107,12 @@ namespace LeverageRECalculator
             LastYearLiabilities = LiabilitiesValue != 0 ? LiabilitiesValue : 1;
             LastYearNetWorth = (Cash + AssetsValue - LiabilitiesValue) != 0 ? (Cash + AssetsValue - LiabilitiesValue) : 1;
 
+            if (Program.ShowTimerOutput)
+            {
+                timer.Stop();
+                Console.WriteLine("\t->Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
+            }
+
             while (Cash >= 25000)
             {
                 #region Handle command
@@ -107,7 +122,7 @@ namespace LeverageRECalculator
                 {
                     Asset type = PresetAssets[KeyNow];
                     Asset myAsset = type.Clone() as Asset;
-                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
+                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
                     BuyAsset(myAsset);
                 }
                 else if (line.StartsWith(";"))
@@ -123,7 +138,7 @@ namespace LeverageRECalculator
                             else break;
                         }
                         Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
+                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
                         BuyAsset(myAsset);
                     }
                 }
@@ -132,7 +147,7 @@ namespace LeverageRECalculator
                     Asset newB = CreateAsset();
                     if (newB == null)
                         continue;
-                    
+
                     BuyAsset(newB);
                 }
                 else if (line == "t")
@@ -143,7 +158,7 @@ namespace LeverageRECalculator
                     if (PresetAssets.TryGetValue(line, out type))
                     {
                         Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO+1);
+                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
                         BuyAsset(myAsset);
                         KeyNow = line;
                     }
@@ -217,12 +232,36 @@ namespace LeverageRECalculator
                     {
                         Console.WriteLine("No assets!");
                         continue;
-
                     }
+                    int breaker = 0;
                     foreach (var asset in Assets)
                     {
+
                         Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstDebt));
+                        if (++breaker % 40000 == 0)
+                        {
+                            Console.WriteLine("Operation seems time consuming.");
+                            if (Console.ReadLine() != "yes")
+                            {
+                                break;
+                            }
+                        }
                     }
+                }
+                else if (line == "assc")
+                {
+                    Console.WriteLine("You own {0} assets.", Assets.Count);
+                }
+                else if (line == "cout")
+                {
+                    bool on = Program.ShowTransactionsOutput = !Program.ShowTransactionsOutput;
+                    Console.WriteLine("cout " + (on ? "ON" : "OFF"));
+                }
+                else if (line == "timer")
+                {
+
+                    bool on = Program.ShowTimerOutput = !Program.ShowTimerOutput;
+                    Console.WriteLine("timer " + (on ? "ON" : "OFF"));
                 }
                 else
                     break;
@@ -259,8 +298,8 @@ namespace LeverageRECalculator
                     double debt = asset.OutstDebt;
                     double value_ = asset.Value;
                     double balance = -debt + value_;
-                    Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
-                    Pay(debt, "Paid off debt of " + FormatCash(debt));
+                    Receive(value_, "\nSold asset " + asset.Name );
+                    Pay(debt, "Paid off debt of " + asset.Name);
                     Console.WriteLine("\tBalance: {0}", FormatCash(balance));
                     totalBalance += balance;
                     sold++;
@@ -385,7 +424,8 @@ namespace LeverageRECalculator
                 balance -= Pay(Expenses, "Expenses");
                 foreach (var item in Assets)
                 {
-                    Console.WriteLine();
+                    if (Program.ShowTransactionsOutput)
+                        Console.WriteLine();
                     balance += Receive(item.ReturnPerYear * item.Value, "Rent for " + item.Name);
                     if (item.LeasePassed < item.LeasePeriod)
                     {
@@ -399,23 +439,7 @@ namespace LeverageRECalculator
                         item.LeasePassed++;
                         balance -= Pay(towardsInterest, string.Format("Interest for {0}", item.Name));
                         balance -= Pay(towardsPrincipal, string.Format("Principal [{0}/{1}] {2}", item.LeasePassed, item.LeasePeriod, item.Name));
-                        /*
-						double payment = (item.Cost - item.DownPayment) / (item.LeasePeriod);
-						item.OutstandingDebt -= payment;
-						item.Equity += payment;
-                        item.LeasePassed++;
-						balance -= Pay(payment, string.Format("Mortgage [{0}/{1}] for {2}", item.LeasePassed, item.LeasePeriod, item.Name));
-*/
                     }
-                    /*
-					else if (item.LeasePassed <= item.LeasePeriod + 1)
-					{
-						double payment = item.InterestDebt;
-                        item.InterestDebt -= payment;
-						balance -= Pay(payment, "Interest for " + item.Name);
-						item.LeasePassed++;
-					}
-					*/
                 }
 
                 Console.WriteLine("Net cashflow: {0}, out of which {1} is passive income", FormatCash(balance), FormatCash(balance - JobIncome + Expenses));
@@ -426,14 +450,16 @@ namespace LeverageRECalculator
         static double Pay(double sum, string whatFor)
         {
             Cash -= sum;
-            Console.WriteLine(" -{0} was payed for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
+            if (Program.ShowTransactionsOutput)
+                Console.WriteLine(" -{0} was payed for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
             return sum;
         }
 
         static double Receive(double sum, string whatFor)
         {
             Cash += sum;
-            Console.WriteLine(" +{0} was received for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
+            if (Program.ShowTransactionsOutput) 
+                Console.WriteLine(" +{0} was received for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
             return sum;
         }
 
