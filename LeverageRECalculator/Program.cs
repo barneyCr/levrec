@@ -58,7 +58,7 @@ namespace LeverageRECalculator
         {
             get
             {
-                return Assets.Sum(a => a.OutstDebt);
+                return Assets.Sum(a => a.OutstandingDebt);
             }
         }
 
@@ -70,14 +70,6 @@ namespace LeverageRECalculator
             Cash = ReadDouble();
             System.Console.WriteLine("\n\n");
 
-            /*
-            Console.WriteLine(
-                "Buy Bloc 1 of type X0 for {0} down, value of {1}, {2} year lease, {3} appreciation per year, {4} interest, {5} return per year?",
-                FormatCash(100000), FormatCash(2500000), 20, 0.01, 0.1, 0.07);
-            Console.Write("yes/no: ");
-            if (Console.ReadLine().ToLower() == "yes")
-                BuyAsset(new Asset("Bloc 1", 2500000, 100000, 20, 0.01, 0.1, 0.07));
-            */
             KeyNow = "X1";
             while (Cash >= -1000000)
             {
@@ -178,7 +170,7 @@ namespace LeverageRECalculator
                     }
                     else
                     {
-                        double debt = soldAsset.OutstDebt;
+                        double debt = soldAsset.OutstandingDebt;
                         double value_ = soldAsset.Value;
                         double balance = -debt + value_;
                         Receive(value_, "Sold asset " + soldAsset.Name + " for " + FormatCash(value_));
@@ -196,7 +188,7 @@ namespace LeverageRECalculator
                         double totalBalance = 0;
                         foreach (var asset in Assets)
                         {
-                            double debt = asset.OutstDebt;
+                            double debt = asset.OutstandingDebt;
                             double value_ = asset.Value;
                             double balance = -debt + value_;
                             Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
@@ -237,7 +229,7 @@ namespace LeverageRECalculator
                     foreach (var asset in Assets)
                     {
 
-                        Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstDebt));
+                        Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
                         if (++breaker % 40000 == 0)
                         {
                             Console.WriteLine("Operation seems time consuming.");
@@ -295,7 +287,7 @@ namespace LeverageRECalculator
                 int sold = 0, rc = 0;
                 foreach (var asset in removing)
                 {
-                    double debt = asset.OutstDebt;
+                    double debt = asset.OutstandingDebt;
                     double value_ = asset.Value;
                     double balance = -debt + value_;
                     Receive(value_, "\nSold asset " + asset.Name );
@@ -426,7 +418,9 @@ namespace LeverageRECalculator
                 {
                     if (Program.ShowTransactionsOutput)
                         Console.WriteLine();
-                    balance += Receive(item.ReturnPerYear * item.Value, "Rent for " + item.Name);
+                    double rent = item.ReturnPerYear * item.Value;
+                    balance += Receive(rent, "Rent for " + item.Name);
+                    item.Tracker.OnRentReceived(rent);
                     if (item.LeasePassed < item.LeasePeriod)
                     {
                         double payment = item.PeriodicPayment(item.LeasePeriod);// * (int)(365/time.TotalDays));
@@ -439,6 +433,7 @@ namespace LeverageRECalculator
                         item.LeasePassed++;
                         balance -= Pay(towardsInterest, string.Format("Interest for {0}", item.Name));
                         balance -= Pay(towardsPrincipal, string.Format("Principal [{0}/{1}] {2}", item.LeasePassed, item.LeasePeriod, item.Name));
+                        item.Tracker.OnPaymentMade(towardsInterest, towardsPrincipal);
                     }
                 }
 
