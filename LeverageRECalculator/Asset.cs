@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 namespace LeverageRECalculator
 {
     public class Asset : ICloneable
@@ -15,6 +15,9 @@ namespace LeverageRECalculator
         public double PrincipalDebt, InterestDebt;
         public double Equity;
         public DateTime Acquired;
+
+        public AssetTracker Tracker;
+
         public Asset(string name, double cost, double down, int years, double appreciation, double interest, double rpy)
         {
             this.Name = name;
@@ -24,6 +27,7 @@ namespace LeverageRECalculator
             this.AppreciationPerYear = appreciation;
             this.Interest = interest;
             this.ReturnPerYear = rpy;
+            this.Tracker = new AssetTracker(this);
         }
 
         Asset()
@@ -71,7 +75,7 @@ namespace LeverageRECalculator
             }
         }
 
-        public double OutstDebt
+        public double OutstandingDebt
         {
             get
             {
@@ -83,7 +87,7 @@ namespace LeverageRECalculator
         {
             get
             {
-                return Value - OutstDebt;
+                return Value - OutstandingDebt;
             }
         }
 
@@ -100,6 +104,7 @@ namespace LeverageRECalculator
             asset.Interest = this.Interest;
             asset.InterestDebt = 0;
             asset.Equity = 0;
+            asset.Tracker = new AssetTracker(this);
 
             return asset;
         }
