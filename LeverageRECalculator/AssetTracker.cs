@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LeverageRECalculator
 {
-    class AssetTracker
+    internal class AssetTracker
     {
         private static DateTime Now { get { return Program.Now; } }
 
@@ -15,10 +15,10 @@ namespace LeverageRECalculator
         public Dictionary<int, double> YearlyInterest;
         public Dictionary<int, double> YearlyPrincipalDeposit;
 
-
-
         public AssetTracker(Asset parent)
         {
+            this.parent = parent;
+
             this.YearlyRent = new Dictionary<int, double>();
             this.YearlyInterest = new Dictionary<int, double>();
             this.YearlyPrincipalDeposit = new Dictionary<int, double>();
@@ -37,7 +37,7 @@ namespace LeverageRECalculator
             this.YearlyPrincipalDeposit.Add(key, principal);
         }
 
-        int YearsOfAge
+        public int YearsOfAge
         {
             get
             {
@@ -126,6 +126,14 @@ namespace LeverageRECalculator
                     return 1 - payments / rent;
                 }
                 else return 0;
+            }
+        }
+
+        public double EquityPercentage
+        {
+            get
+            {
+                return Math.Min(1, parent.Equity / parent.Cost);
             }
         }
     }

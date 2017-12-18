@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace LeverageRECalculator
 {
@@ -36,7 +37,7 @@ namespace LeverageRECalculator
 
         public static double Cash;
         public static DateTime Start = DateTime.Now, Now = Start;
-        public static List<Asset> Assets = new List<Asset>(100);
+        public static List<Asset> Assets = new List<Asset>(1000);
         public static Dictionary<string, Asset> PresetAssets = new Dictionary<string, Asset>();
         public static string KeyNow = "X0";
 
@@ -64,6 +65,11 @@ namespace LeverageRECalculator
 
         public static void Main()
         {
+            //if (!License()) {
+            //    Console.WriteLine("Broken environment - check license - check version.");
+            //    return;
+            //}
+
             ReadPresetAssets();
 
             Console.Write("\nStarting with: ", FormatCash(Cash));
@@ -102,7 +108,7 @@ namespace LeverageRECalculator
             if (Program.ShowTimerOutput)
             {
                 timer.Stop();
-                Console.WriteLine("\t->Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
+                Console.WriteLine("\t--> Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
             }
 
             while (Cash >= 25000)
@@ -218,7 +224,7 @@ namespace LeverageRECalculator
                         continue;
                     ExpCat.OtherExp += x;
                 }
-                else if (line == "assets")
+                else if (line.StartsWith("assets"))
                 {
                     if (Assets.Count == 0)
                     {
@@ -228,8 +234,15 @@ namespace LeverageRECalculator
                     int breaker = 0;
                     foreach (var asset in Assets)
                     {
+                        if (line != "assets verbose")
+                            Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
+                        else
+                        {
+                            DescribeAsset(asset);
 
-                        Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
+                            Console.WriteLine("\n");
+
+                        }
                         if (++breaker % 40000 == 0)
                         {
                             Console.WriteLine("Operation seems time consuming.");
@@ -238,6 +251,20 @@ namespace LeverageRECalculator
                                 break;
                             }
                         }
+                    }
+                }
+                else if (line.StartsWith("asset1")) {
+                    try
+                    {
+                        line = line.Substring(7);
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+                        Asset a = Assets.First(x => x.Name.EndsWith(line));
+                        DescribeAsset(a);
+                        Console.WriteLine();
+                    }
+                        catch (Exception e) {
+                            Console.WriteLine(e.Message);
                     }
                 }
                 else if (line == "assc")
@@ -265,7 +292,24 @@ namespace LeverageRECalculator
             Console.ReadLine();
         }
 
+        private static void DescribeAsset(Asset asset)
+        {
+            Console.WriteLine("  {0}", asset.Name);
+            Console.WriteLine("\tYears of age: {0}", asset.Tracker.YearsOfAge);
+            Console.WriteLine("\tValued at: {0}", FormatCash(asset.Value));
+            Console.WriteLine("\tOriginal value: {0}", FormatCash(asset.Cost));
+            Console.WriteLine("\tDown payment: {0}", FormatCash(asset.DownPayment));
+            Console.WriteLine("\tEquity: {0}", FormatCash(asset.Equity));
+            Console.WriteLine("\tOwnership: {0:F2}%", asset.Tracker.EquityPercentage * 100);
+            Console.WriteLine("\tDebt: {0}\n", FormatCash(asset.OutstandingDebt));
+            Console.WriteLine("\tDTV: {0:F2}%", asset.Tracker.DebtToValue * 100);
+
+            Console.WriteLine("\tLast year profit margin: {0:F2}%", asset.Tracker.LastYearProfitMargin * 100);
+            Console.WriteLine("\tCash on cash average: {0:F2}%", asset.Tracker.CashOnCashAverage * 100);
+        }
+
         static bool SellRange() {
+            Console.WriteLine("Warning! Do not sell more than 1000 assets on one occasion!");
             try
             {
                 Console.Write("Start index: ");
@@ -378,31 +422,22 @@ namespace LeverageRECalculator
             get
             {
                 var yearsSinceStart = (Now - Start).TotalDays / 365;
-                return Math.Min(3000000, Math.Pow(1.07, yearsSinceStart) * baseSalary + Math.Pow(1.09, yearsSinceStart) * baseBonus);
+                return Math.Min(2250000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
             }
         }
 
         static double Expenses
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.TravelExp + ExpCat.OtherExp;
+                return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.Wine + ExpCat.FunExp + ExpCat.TravelExp + ExpCat.OtherExp;
             }
         }
 
-        static class ExpCat
-        {
-            public static double RentExp = 1200 * 12;
-            public static double FoodExp = 2750 * 12;
-            public static double CarExp = 7500;
-            public static double GasExp = 1250;
-            public static double ClothesExp = 3000;
-            public static double Wine = 15 * 200;
-            public static double TravelExp = 0;
-            public static double OtherExp = 0;
-        }
 
-        static double baseSalary = 100000;
+
+        static double baseSalary = 70000;
         static double baseBonus = 10000;
         static void PassTime(TimeSpan time)
         {
@@ -411,6 +446,7 @@ namespace LeverageRECalculator
             while (yearsPassed-- > 0)
             {
                 var yearsSinceStart = (Now - Start).TotalDays / 365;
+                Now += TimeSpan.FromDays(365);
                 Console.WriteLine();
                 balance += Receive(JobIncome, "Salary + Bonus");
                 balance -= Pay(Expenses, "Expenses");
@@ -435,10 +471,12 @@ namespace LeverageRECalculator
                         balance -= Pay(towardsPrincipal, string.Format("Principal [{0}/{1}] {2}", item.LeasePassed, item.LeasePeriod, item.Name));
                         item.Tracker.OnPaymentMade(towardsInterest, towardsPrincipal);
                     }
+                    else {
+                        item.Tracker.OnPaymentMade(0, 0);
+                    }
                 }
 
                 Console.WriteLine("Net cashflow: {0}, out of which {1} is passive income", FormatCash(balance), FormatCash(balance - JobIncome + Expenses));
-                Now += TimeSpan.FromDays(365);
             }
         }
 
@@ -513,6 +551,22 @@ namespace LeverageRECalculator
             {
                 return 0;
             }
+        }
+
+
+
+
+        static class ExpCat
+        {
+            public static double RentExp = 1200 * 12;
+            public static double FoodExp = 2775 * 12;
+            public static double CarExp = 7500;
+            public static double GasExp = 1650;
+            public static double ClothesExp = 3000;
+            public static double Wine = 15 * 200;
+            public static double FunExp = 87 * 52;
+            public static double TravelExp = 0;
+            public static double OtherExp = 0;
         }
     }
 }

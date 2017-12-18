@@ -14,9 +14,21 @@ namespace LeverageRECalculator
         public double Interest;
         public double PrincipalDebt, InterestDebt;
         public double Equity;
-        public DateTime Acquired;
+        public DateTime Acquired
+        {
+            get
+            {
+                return _acq;
+            }
 
-        public AssetTracker Tracker;
+            set
+            {
+                _acq = value;
+            }
+        }
+        DateTime _acq;
+
+        internal AssetTracker Tracker;
 
         public Asset(string name, double cost, double down, int years, double appreciation, double interest, double rpy)
         {
@@ -104,7 +116,7 @@ namespace LeverageRECalculator
             asset.Interest = this.Interest;
             asset.InterestDebt = 0;
             asset.Equity = 0;
-            asset.Tracker = new AssetTracker(this);
+            asset.Tracker = new AssetTracker(asset);
 
             return asset;
         }
