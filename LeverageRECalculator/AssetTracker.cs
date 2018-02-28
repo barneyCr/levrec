@@ -30,9 +30,13 @@ namespace LeverageRECalculator
             this.YearlyRent.Add(key, sum);
         }
 
+
         public void OnPaymentMade(double interest, double principal)
         {
             int key = YearsOfAge;
+            if (YearlyInterest.ContainsKey(key)) {
+                key = new Random().Next(500, 500000); // todo
+            }
             this.YearlyInterest.Add(key, interest);
             this.YearlyPrincipalDeposit.Add(key, principal);
         }

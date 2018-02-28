@@ -49,5 +49,8 @@
   <ItemGroup>
     <None Include="Licensing.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Instructions.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

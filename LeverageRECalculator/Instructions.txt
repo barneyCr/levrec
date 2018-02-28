@@ -1,0 +1,43 @@
+﻿ASSET CHARACTERISTICS explained
+example: X1|Proprietate X1-{0}|90000|17500|30|0.028|0.0425|0.0725
+    Type: "X1", Name = "Proprietate X1-1", 
+    Property cost = 90000, Down payment = 17500
+    Loan term (years) = 30, Appreciation/year = 0.028*100 (2.8%)
+    Loan interest rate = 0.0425 (4.25%), Rent = 0.0725 (7.25%)
+------------------------
+
+MANAGING COMMANDS explained
+
+' => buy 1 asset (of set type, or default)
+; => buy assets with all available money ($50000 => 3 x $15000)
+c => buy (customize) new type of asset
+t => set type of asset (for future buying)
+t? => view available asset types (for example X1, X2, ...)
+sell => sell asset by name (input in new line)
+        you will pay the principal debt
+        interest will be set to 0
+sell range => sell assets in given range (input in new line)
+        for example: for Property X0-50, ..., Property X0-80
+        input should be: 50 [Enter] 80
+pay => pay a sum to reduce principal debt (input in new line)
+       (there will be a reduction in interest
+       debt as a result of this)
+pay full => pay down all the principal debt on the property
+is => increase yearly spending amount by x (input in new line)
+        (use negative amount to decrease spending)
+assets => list of assets owned
+assets verbose => list of assets and some details
+asset1 [NAME] => details about an asset owned by you
+assc => number of assets owned
+cash => shows available cash
+cout => turn transaction log ON/OFF (default is ON)
+        just write cout
+timer => set timer ON/OFF
+odo-reset => reset asset counter to 1. 
+    use only after selling everything
+hardmoney => cheat code. add/remove money
+showhardmoney => hardmoney transactions log
+hardmoney handle => pays back all money that 
+           was taken using the cheat code
+           (if you have already paid a portion,
+            it will only pay the remaining amount)

@@ -9,26 +9,25 @@ namespace LeverageRECalculator
         public double Cost;
         public double DownPayment;
         public double ReturnPerYear;
-        public int LeasePeriod, LeasePassed;
         public double AppreciationPerYear;
         public double Interest;
         public double PrincipalDebt, InterestDebt;
         public double Equity;
+        public int LeasePeriod, LeasePassed;
+        internal AssetTracker Tracker;
+        DateTime _acq;
         public DateTime Acquired
         {
             get
             {
                 return _acq;
             }
-
             set
             {
                 _acq = value;
             }
         }
-        DateTime _acq;
 
-        internal AssetTracker Tracker;
 
         public Asset(string name, double cost, double down, int years, double appreciation, double interest, double rpy)
         {
@@ -54,7 +53,6 @@ namespace LeverageRECalculator
                 return Program.Now - this.Acquired;
             }
         }
-
 
         public double Value
         {

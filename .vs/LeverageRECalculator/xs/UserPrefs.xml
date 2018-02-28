@@ -1,0 +1,21 @@
+﻿<Properties StartupConfiguration="{EACFDA37-59C1-4F88-9816-EF3FD2B77E31}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="LeverageRECalculator/Program.cs">
+    <Files>
+      <File FileName="LeverageRECalculator/Program.cs" Line="379" Column="32" />
+      <File FileName="LeverageRECalculator/Asset.cs" Line="75" Column="43" NotebookId="1" />
+      <File FileName="LeverageRECalculator/AssetTracker.cs" Line="110" Column="18" NotebookId="1" />
+      <File FileName="LeverageRECalculator/Properties/AssemblyInfo.cs" Line="1" Column="1" NotebookId="1" />
+      <File FileName="LeverageRECalculator/Instructions.txt" Line="21" Column="22" NotebookId="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches>
+    <Watch file="LeverageRECalculator/Program.cs" line="145" offsetX="657" offsetY="2308" expression="LastYearAssets" liveUpdate="False" />
+    <Watch file="LeverageRECalculator/Program.cs" line="145" offsetX="559" offsetY="2331" expression="AssetsValue" liveUpdate="False" />
+  </MonoDevelop.Ide.DebuggingService.PinnedWatches>
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.ItemProperties.LeverageRECalculator PreferredExecutionTarget="MonoDevelop.Default" />
+</Properties>
