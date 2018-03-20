@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -113,7 +112,7 @@ namespace LeverageRECalculator
                 Console.WriteLine("\t--> Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
             }
 
-            while (Cash >= 12500)
+            while (Cash >= 1)
             {
                 #region Handle command
                 Console.WriteLine("\n\nBuy building of type {0}?\n\t \"'\" = buy 1, \";\" = buy with all spare cash, \"c\" = create custom building, \"t\"= set type, ENTER = no", KeyNow);
@@ -203,6 +202,7 @@ namespace LeverageRECalculator
                             Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
                             //Pay(debt, "Paid off debt of " + FormatCash(debt));
                             PayTowardsPrincipal(debt, asset);
+                            if(Program.ShowTransactionsOutput)
                             Console.WriteLine("\tBalance: {0}", FormatCash(balance));
                             // TODO BALANCE VS PROFIT ?
                             totalBalance += balance;
@@ -354,6 +354,9 @@ namespace LeverageRECalculator
                 else if (line == "help") {
                     Console.WriteLine(Texts.help);
                 }
+                else if (line == "exit-01") {
+                    Environment.Exit(1);
+                }
                 else if (line != "") {
                     continue;
                 }
@@ -406,6 +409,7 @@ namespace LeverageRECalculator
                 });
                 double totalBalance = 0;
                 int sold = 0, rc = 0;
+                Stopwatch sw = Stopwatch.StartNew();
                 foreach (var asset in removing)
                 {
                     double debt = asset.PrincipalDebt;
@@ -414,11 +418,11 @@ namespace LeverageRECalculator
                     Receive(value_, "\nSold asset " + asset.Name);
                     //Pay(debt, "Paid off debt of " + asset.Name);
                     PayTowardsPrincipal(debt, asset);
+                    if (Program.ShowTransactionsOutput)
                     Console.WriteLine("\tBalance: {0}", FormatCash(balance));
                     totalBalance += balance;
                     sold++;
                 }
-                Stopwatch sw = Stopwatch.StartNew();
                 Assets.RemoveAll(a =>
                 {
                     if (rc == sold)
@@ -500,7 +504,8 @@ namespace LeverageRECalculator
         {
             get
             {
-                var yearsSinceStart = (Now - Start).TotalDays / 365;
+                var yearsSinceStart = (Now - Start).TotalDays / 365; 
+                //return 100000;
                 return Math.Min(2245000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
             }
         }
@@ -543,7 +548,6 @@ namespace LeverageRECalculator
                         double towardsInterest=0, towardsPrincipal=0;
                         if (item.PrincipalDebt >= payment)
                         {
-
                             towardsInterest = item.Interest * item.PrincipalDebt;
                             towardsPrincipal = payment - towardsInterest;
                         }
@@ -640,7 +644,7 @@ namespace LeverageRECalculator
             return sum;
         }
 
-        static string FormatCash(double n)
+        public static string FormatCash(double n)
         {
             return string.Format(System.Globalization.CultureInfo.GetCultureInfo("en-US"), "{0:C}", n);
         }
@@ -753,7 +757,7 @@ hardmoney handle => pays back all money that
             public static double GasExp = 1650;
             public static double ClothesExp = 3000;
             public static double Wine = 15 * 200;
-            public static double FunExp = 87 * 52;
+            public static double FunExp = 88 * 52;
             public static double TravelExp = 0;
             public static double OtherExp = 0;
         }
