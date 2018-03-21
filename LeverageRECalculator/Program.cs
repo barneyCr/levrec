@@ -1,40 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using System.Text;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 
 namespace LeverageRECalculator
 {
-    public class Program
+    public partial class Program
     {
-        static Asset CreateAsset()
-        {
-            Console.Write("Name: ");
-            string name = Console.ReadLine();
-            Console.Write("Cost: ");
-            double cost = ReadDouble();
-            Console.Write("Down payment: ");
-            double downPayment = ReadDouble();
-            Console.Write("Years of lease: ");
-            int leasePeriod = ReadValue();
-            Console.Write("Appreciation per year (for 2%, write 0.02): ");
-            double app = ReadDouble();
-            Console.Write("Interest for mortgage (5% => 0.05): ");
-            double interest = ReadDouble();
-            Console.Write("Return per year (rent; standard is 0.07): ");
-            double rpy = ReadDouble();
-
-            Console.Write("Confirmation: ");
-            if (Console.ReadLine() == "no")
-                return null;
-
-            return new Asset(name, cost, downPayment, leasePeriod, app, interest, rpy);
-        }
-
+        #region Properties and fields
         public static double Cash;
         public static DateTime Start = DateTime.Now, Now = Start;
         public static List<Asset> Assets = new List<Asset>(1000);
@@ -48,34 +25,16 @@ namespace LeverageRECalculator
 
         public static bool ShowTransactionsOutput = true;
         public static bool ShowTimerOutput = false;
-
-        public static double AssetsValue
-        {
-            get
-            {
-                return Assets.Sum(a => a.Value);
-            }
-        }
-        public static double LiabilitiesValue
-        {
-            get
-            {
-                return Assets.Sum(a => a.OutstandingDebt);
-            }
-        }
+        #endregion
 
         public static void Main()
         {
-            //if (!License()) {
-            //    Console.WriteLine("Broken environment - check license - check version.");
-            //    return;
-            //}
-
+            DeviateTextStreams();
             ReadPresetAssets();
 
-            Console.Write("\nStarting with: ", FormatCash(Cash));
+            Out.Write("\nStarting with: ", FormatCash(Cash));
             Cash = ReadDouble();
-            System.Console.WriteLine("\n\n");
+            Out.WriteLine("\n\n");
 
             KeyNow = "X1";
             while (Cash >= -1000000)
@@ -84,23 +43,26 @@ namespace LeverageRECalculator
             }
         }
 
+        #region Action
         private static void ApplicationAction()
         {
+            Out.Flush();
             Stopwatch timer = null;
             if (Program.ShowTimerOutput)
             {
-                Console.WriteLine("Routine starting");
+                Out.WriteLine("Routine starting");
                 timer = Stopwatch.StartNew();
             }
             PassTime(TimeSpan.FromDays(365));
 
+
             double deltaA = AssetsValue - LastYearAssets, deltaL = LiabilitiesValue - LastYearLiabilities, deltaNW = (Cash + AssetsValue - LiabilitiesValue) - LastYearNetWorth;
-            Console.WriteLine("\nTime is {1}={0:F0} years", (Now - Start).TotalDays / 365, 'Δ');
-            Console.WriteLine("Cash in bank: {0}", FormatCash(Cash));
-            Console.WriteLine("  Assets: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(AssetsValue).PadLeft(24, ' '), deltaA >= 0 ? "+" : "", FormatCash(deltaA), AssetsValue / LastYearAssets * 100 - 100);
-            Console.WriteLine("  Liabilities: {0}  ({1}{2}    {1}{3:F2}%)", string.Format("-{0}", FormatCash(LiabilitiesValue)).PadLeft(19, ' '), deltaL >= 0 ? "+" : "", FormatCash(deltaL), LiabilitiesValue / LastYearLiabilities * 100 - 100);
-            Console.WriteLine("\tNet worth: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(Cash + AssetsValue - LiabilitiesValue).PadLeft(19), deltaNW >= 0 ? "+" : "", FormatCash(deltaNW), (Cash + AssetsValue - LiabilitiesValue) / LastYearNetWorth * 100 - 100);
-            Console.WriteLine();
+            Out.WriteLine("\nTime is {1}={0:F0} years", (Now - Start).TotalDays / 365, 'Δ');
+            Out.WriteLine("Cash in bank: {0}", FormatCash(Cash));
+            Out.WriteLine("  Assets: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(AssetsValue).PadLeft(24, ' '), deltaA >= 0 ? "+" : "", FormatCash(deltaA), AssetsValue / LastYearAssets * 100 - 100);
+            Out.WriteLine("  Liabilities: {0}  ({1}{2}    {1}{3:F2}%)", string.Format("-{0}", FormatCash(LiabilitiesValue)).PadLeft(19, ' '), deltaL >= 0 ? "+" : "", FormatCash(deltaL), LiabilitiesValue / LastYearLiabilities * 100 - 100);
+            Out.WriteLine("\tNet worth: {0}  ({1}{2}    {1}{3:F2}%)", FormatCash(Cash + AssetsValue - LiabilitiesValue).PadLeft(19), deltaNW >= 0 ? "+" : "", FormatCash(deltaNW), (Cash + AssetsValue - LiabilitiesValue) / LastYearNetWorth * 100 - 100);
+            Out.WriteLine();
 
             LastYearAssets = AssetsValue != 0 ? AssetsValue : 1;
             LastYearLiabilities = LiabilitiesValue != 0 ? LiabilitiesValue : 1;
@@ -109,14 +71,18 @@ namespace LeverageRECalculator
             if (Program.ShowTimerOutput)
             {
                 timer.Stop();
-                Console.WriteLine("\t--> Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
+                Out.WriteLine("\t--> Routine executed in {0:F2} ms", timer.Elapsed.TotalMilliseconds);
             }
+
+            Out.Flush();
+
 
             while (Cash >= 1)
             {
                 #region Handle command
-                Console.WriteLine("\n\nBuy building of type {0}?\n\t \"'\" = buy 1, \";\" = buy with all spare cash, \"c\" = create custom building, \"t\"= set type, ENTER = no", KeyNow);
-                string line = Console.ReadLine();
+                Out.WriteLine("\n\nBuy building of type {0}?", KeyNow);
+                Console.WriteLine("\t \"'\" = buy 1, \";\" = buy with all spare cash, \"c\" = create custom building, \"t\"= set type, ENTER = no");
+                string line = In.ReadLine();
                 if (line == "'")
                 {
                     Asset type = PresetAssets[KeyNow];
@@ -151,8 +117,8 @@ namespace LeverageRECalculator
                 }
                 else if (line == "t")
                 {
-                    Console.Write("Write asset key: ");
-                    line = Console.ReadLine().ToUpper();
+                    Out.Write("Write asset key: ");
+                    line = In.ReadLine().ToUpper();
                     Asset type;
                     if (PresetAssets.TryGetValue(line, out type))
                     {
@@ -163,17 +129,17 @@ namespace LeverageRECalculator
                     }
                     else
                     {
-                        Console.WriteLine("Type does not exist in iv.txt");
+                        Out.WriteLine("Type does not exist in iv.txt");
                     }
                 }
                 else if (line == "sell")
                 {
-                    Console.Write("Which asset do you want to sell? ");
-                    line = Console.ReadLine();
+                    Out.Write("Which asset do you want to sell? ");
+                    line = In.ReadLine();
                     Asset soldAsset = Assets.FirstOrDefault(a => a.Name == line);
                     if (soldAsset == null)
                     {
-                        Console.WriteLine("Cannot find an asset named {0}", line);
+                        Out.WriteLine("Cannot find an asset named {0}", line);
                     }
                     else
                     {
@@ -183,15 +149,15 @@ namespace LeverageRECalculator
                         Receive(value_, "Sold asset " + soldAsset.Name + " for " + FormatCash(value_));
                         //Pay(debt, "Paid off debt of " + FormatCash(debt));
                         PayTowardsPrincipal(debt, soldAsset);
-                        Console.WriteLine("Balance: {0}", FormatCash(balance));
+                        Out.WriteLine("Balance: {0}", FormatCash(balance));
 
                         Assets.Remove(soldAsset);
                     }
                 }
                 else if (line == "sell all")
                 {
-                    Console.WriteLine("Are you sure?");
-                    if (Console.ReadLine() == "yes")
+                    Out.WriteLine("Are you sure?");
+                    if (In.ReadLine() == "yes")
                     {
                         double totalBalance = 0;
                         foreach (var asset in Assets)
@@ -203,12 +169,12 @@ namespace LeverageRECalculator
                             //Pay(debt, "Paid off debt of " + FormatCash(debt));
                             PayTowardsPrincipal(debt, asset);
                             if(Program.ShowTransactionsOutput)
-                            Console.WriteLine("\tBalance: {0}", FormatCash(balance));
+                            Out.WriteLine("\tBalance: {0}", FormatCash(balance));
                             // TODO BALANCE VS PROFIT ?
                             totalBalance += balance;
                         }
                         Assets.Clear();
-                        Console.WriteLine("\n\n\t Total Balance: {0}", FormatCash(totalBalance));
+                        Out.WriteLine("\n\n\t Total Balance: {0}", FormatCash(totalBalance));
                     }
                 }
                 else if (line == "sell range")
@@ -218,12 +184,12 @@ namespace LeverageRECalculator
                 }
                 else if (line == "t?")
                 {
-                    Console.WriteLine(IVTXT);
+                    Out.WriteLine(IVTXT);
                 }
                 else if (line.StartsWith("pay"))
                 {
-                    Console.WriteLine("Which asset?");
-                    string name = Console.ReadLine();
+                    Out.WriteLine("Which asset?");
+                    string name = In.ReadLine();
                     Asset a = Assets.FirstOrDefault(x => x.Name.EndsWith(name));
                     if (a != null)
                     {
@@ -234,19 +200,19 @@ namespace LeverageRECalculator
                         }
                         else
                         {
-                            Console.Write("Payment: ");
+                            Out.Write("Payment: ");
                             sum = ReadDouble();
                         }
                         PayTowardsPrincipal(sum, a);
                     }
                     else
                     {
-                        Console.WriteLine("Cannot find asset {0}", name);
+                        Out.WriteLine("Cannot find asset {0}", name);
                     }
                 }
                 else if (line.StartsWith("is"))
                 {
-                    Console.WriteLine("By how much?");
+                    Out.WriteLine("By how much?");
 
                     double x = ReadDouble();
                     if (x == 0)
@@ -257,23 +223,23 @@ namespace LeverageRECalculator
                 {
                     if (Assets.Count == 0)
                     {
-                        Console.WriteLine("No assets!");
+                        Out.WriteLine("No assets!");
                         continue;
                     }
                     int breaker = 0;
                     foreach (var asset in Assets)
                     {
                         if (line != "assets verbose")
-                            Console.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
+                            Out.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
                         else
                         {
                             DescribeAsset(asset);
-                            Console.WriteLine("\n");
+                            Out.WriteLine("\n");
                         }
                         if (++breaker % 40000 == 0)
                         {
-                            Console.WriteLine("Operation seems time consuming.");
-                            if (Console.ReadLine() != "yes")
+                            Out.WriteLine("Operation seems time consuming.");
+                            if (In.ReadLine() != "yes")
                             {
                                 break;
                             }
@@ -289,61 +255,61 @@ namespace LeverageRECalculator
                             continue;
                         Asset a = Assets.First(x => x.Name.EndsWith(line));
                         DescribeAsset(a);
-                        Console.WriteLine();
+                        Out.WriteLine();
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.Message);
+                        Out.WriteLine(e.Message);
                     }
                 }
                 else if (line == "assc")
                 {
-                    Console.WriteLine("You own {0} assets.", Assets.Count);
+                    Out.WriteLine("You own {0} assets.", Assets.Count);
                 }
                 else if (line == "cash")
                 {
-                    Console.WriteLine("Cash available: {0}", FormatCash(Cash));
+                    Out.WriteLine("Cash available: {0}", FormatCash(Cash));
                 }
                 else if (line == "cout")
                 {
                     bool on = Program.ShowTransactionsOutput = !Program.ShowTransactionsOutput;
-                    Console.WriteLine("cout " + (on ? "ON" : "OFF"));
+                    Out.WriteLine("cout " + (on ? "ON" : "OFF"));
                 }
                 else if (line == "timer")
                 {
                     bool on = Program.ShowTimerOutput = !Program.ShowTimerOutput;
-                    Console.WriteLine("timer " + (on ? "ON" : "OFF"));
+                    Out.WriteLine("timer " + (on ? "ON" : "OFF"));
                 }
                 else if (line == "odo-reset")
                 {
-                    Console.WriteLine("Warning! Resetting ODO can result in unexpected problems. Are you sure you want to continue?");
-                    if (Console.ReadLine() == "yes")
+                    Out.WriteLine("Warning! Resetting ODO can result in unexpected problems. Are you sure you want to continue?");
+                    if (In.ReadLine() == "yes")
                     {
                         Asset.ODO = 0;
-                        Console.WriteLine("ODO = 0.");
+                        Out.WriteLine("ODO = 0.");
                     }
                 }
                 else if (line == "hardmoney")
                 {
                     if (!HardMoneyTransactions.Any())
                     {
-                        Console.WriteLine("\tHardmoney is a function mainly used for hard money\n" +
+                        Out.WriteLine("\tHardmoney is a function mainly used for hard money\n" +
                                           "\tlending simulation or for debugging purposes\n" +
                                           "\tTo see how it was used type \'showhardmoney\'." +
                                           "\nYou can now type the amount of money you want to receive.\n" +
                                           "If you want to pay it back simply input a negative sum.");
                     }
-                    Console.Write("Amount? ");
+                    Out.Write("Amount? ");
                     double sum = ReadDouble();
                     Cash += sum;
                     HardMoneyTransactions.Add(sum);
                 }
                 else if (line == "showhardmoney")
                 {
-                    Console.WriteLine("Hardmoney log:");
-                    HardMoneyTransactions.ForEach(t => Console.WriteLine("\t{0}{1}", t < 0 ? "-" : " ", FormatCash(Math.Abs(t))));
-                    Console.WriteLine("\t--------\n\t== {0}", FormatCash(HardMoneyTransactions.Sum()));
-                    Console.WriteLine();
+                    Out.WriteLine("Hardmoney log:");
+                    HardMoneyTransactions.ForEach(t => Out.WriteLine("\t{0}{1}", t < 0 ? "-" : " ", FormatCash(Math.Abs(t))));
+                    Out.WriteLine("\t--------\n\t== {0}", FormatCash(HardMoneyTransactions.Sum()));
+                    Out.WriteLine();
                 }
                 else if (line == "hardmoney handle")
                 {
@@ -352,7 +318,7 @@ namespace LeverageRECalculator
                     HardMoneyTransactions.Add(-harddebt);
                 }
                 else if (line == "help") {
-                    Console.WriteLine(Texts.help);
+                    Out.WriteLine(Texts.help);
                 }
                 else if (line == "exit-01") {
                     Environment.Exit(1);
@@ -366,163 +332,10 @@ namespace LeverageRECalculator
             }
 
 
-            Console.WriteLine("\n\n\nPress Enter to pass another year");
-            Console.ReadLine();
+            Out.WriteLine("\n\n\nEND OF YEAR {0}\n-------------\n\n", (Now-Start).TotalDays/365);
+            Out.WriteLine("[Press enter to pass another year]");
+            In.ReadLine();
         }
-
-        private static void DescribeAsset(Asset asset)
-        {
-            Console.WriteLine("  {0}", asset.Name);
-            Console.WriteLine("\tYears of age: {0}", asset.Tracker.YearsOfAge);
-            Console.WriteLine("\tValued at: {0}", FormatCash(asset.Value));
-            Console.WriteLine("\tOriginal value: {0}", FormatCash(asset.Cost));
-            Console.WriteLine("\tDown payment: {0}", FormatCash(asset.DownPayment));
-            Console.WriteLine("\tEquity: {0}", FormatCash(asset.Equity));
-            Console.WriteLine("\tOwnership: {0:F2}%", asset.Tracker.EquityPercentage * 100);
-            Console.WriteLine("\tDebt: {0} \n\t\t[{1}]\n", FormatCash(asset.OutstandingDebt), FormatCash(asset.PrincipalDebt));
-
-
-            Console.WriteLine("\tDTV: {0:F2}%", asset.Tracker.DebtToValue * 100);
-            Console.WriteLine("\tLast year profit margin: {0:F2}%", asset.Tracker.LastYearProfitMargin * 100);
-            Console.WriteLine("\tCash on cash average: {0:F2}%", asset.Tracker.CashOnCashAverage * 100);
-        }
-
-        static bool SellRange()
-        {
-            Console.WriteLine("Warning! Do not sell more than 1000 assets on one occasion!");
-            try
-            {
-                Console.Write("Start index: ");
-                int start = ReadValue();
-                Console.Write("End index: ");
-                int end = ReadValue();
-                if (start < 0 || start > end)// || end > Assets.Count) this last bit comes with a lot of problems
-                    return false;
-                var removing = Assets.Where(asset =>
-                {
-                    // cla x-1
-                    // 123456
-                    // 012345
-                    string str = new string(asset.Name.Skip(asset.Name.LastIndexOf('-') + 1).ToArray());
-                    int id = int.Parse(str);
-                    return start <= id && end >= id;
-                });
-                double totalBalance = 0;
-                int sold = 0, rc = 0;
-                Stopwatch sw = Stopwatch.StartNew();
-                foreach (var asset in removing)
-                {
-                    double debt = asset.PrincipalDebt;
-                    double value_ = asset.Value;
-                    double balance = -debt + value_;
-                    Receive(value_, "\nSold asset " + asset.Name);
-                    //Pay(debt, "Paid off debt of " + asset.Name);
-                    PayTowardsPrincipal(debt, asset);
-                    if (Program.ShowTransactionsOutput)
-                    Console.WriteLine("\tBalance: {0}", FormatCash(balance));
-                    totalBalance += balance;
-                    sold++;
-                }
-                Assets.RemoveAll(a =>
-                {
-                    if (rc == sold)
-                        // this makes sure we don't perform unnecessary checks, if all that should have been sold are sold
-                        // we used to spend minutes here when the list was long
-                        return false;
-                    bool willRemove = removing.Contains(a);
-                    rc = willRemove ? rc + 1 : rc;
-                    return willRemove;
-                });
-                sw.Stop();
-                Console.WriteLine("\n\n\tSold {0} assets for {1}\nTime needed: {2:F2} seconds", sold, FormatCash(totalBalance), sw.Elapsed.TotalSeconds);
-                return true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                return false;
-            }
-        }
-
-        static string IVTXT = "";
-        private static void ReadPresetAssets()
-        {
-            PresetAssets.Clear();
-            Func<string, double> parser = s => double.Parse(s);
-            StringBuilder str = new StringBuilder();
-            if (File.Exists("iv.txt"))
-            {
-                Console.WriteLine("Reading from iv.txt:");
-                using (StreamReader reader = new StreamReader("iv.txt"))
-                {
-                    string line;
-                    while (!string.IsNullOrEmpty((line = reader.ReadLine())))
-                    {
-                        Thread.Sleep(10);
-                        string[] data = line.Split('|');
-                        try
-                        {
-                            double cost = parser(data[2]);
-                            double down = parser(data[3]);
-                            int leasePd = (int)parser(data[4]);
-                            double app = parser(data[5]);
-                            double interest = parser(data[6]);
-                            double rpy = parser(data[7]);
-                            PresetAssets.Add(data[0], new Asset(data[1], cost, down, leasePd, app, interest, rpy));
-                            Console.WriteLine("  " + line);
-                            str.AppendLine(line);
-                        }
-                        catch (FormatException e)
-                        {
-                            Console.WriteLine(e.Message);
-                            continue;
-                        }
-                        catch (IndexOutOfRangeException e)
-                        {
-                            Console.WriteLine(e.Message);
-                            continue;
-                        }
-                        catch (ArgumentException e)
-                        {
-                            Console.WriteLine(e.Message);
-                            continue;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine("iv.txt does not exist");
-                Console.WriteLine("Adding classic building");
-                PresetAssets.Add("X1", new Asset("Bloc X1-{0}", 150000, 40000, 30, 0.03, 0.045, 0.07));
-                str.AppendLine("X1|Bloc X1-{0}|150000|40000|30|0.03|0.045|0.07");
-            }
-            IVTXT = str.ToString();
-        }
-
-        static double JobIncome
-        {
-            get
-            {
-                var yearsSinceStart = (Now - Start).TotalDays / 365; 
-                //return 100000;
-                return Math.Min(2245000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
-            }
-        }
-
-        static double Expenses
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.Wine + ExpCat.FunExp + ExpCat.TravelExp + ExpCat.OtherExp;
-            }
-        }
-
-
-
-        static double baseSalary = 70000;
-        static double baseBonus = 10000;
         static void PassTime(TimeSpan time)
         {
             int yearsPassed = (int)time.TotalDays / 365;
@@ -531,21 +344,21 @@ namespace LeverageRECalculator
             {
                 var yearsSinceStart = (Now - Start).TotalDays / 365;
                 Now += TimeSpan.FromDays(365);
-                Console.WriteLine();
+                Out.WriteLine();
                 balance += Receive(JobIncome, "Salary + Bonus");
                 balance -= Pay(Expenses, "Expenses");
                 foreach (var item in Assets)
                 {
                     if (Program.ShowTransactionsOutput)
-                        Console.WriteLine();
+                        Out.WriteLine();
                     double rent = item.ReturnPerYear * item.Value;
-                    balance += Receive(rent, "Rent for " + item.Name);
+                    balance += Receive(rent, "Income for " + item.Name);
                     item.Tracker.OnRentReceived(rent);
                     if (item.LeasePassed < item.LeasePeriod)
                     {
                         bool haveToPay = true;
                         double payment = item.PeriodicPayment(item.LeasePeriod);// * (int)(365/time.TotalDays));
-                        double towardsInterest=0, towardsPrincipal=0;
+                        double towardsInterest = 0, towardsPrincipal = 0;
                         if (item.PrincipalDebt >= payment)
                         {
                             towardsInterest = item.Interest * item.PrincipalDebt;
@@ -579,15 +392,230 @@ namespace LeverageRECalculator
                     }
                 }
 
-                Console.WriteLine("Net cashflow: {0}, out of which {1} is passive income", FormatCash(balance), FormatCash(balance - JobIncome + Expenses));
+                Out.WriteLine("Net cashflow: {0}, out of which {1} is passive income", FormatCash(balance), FormatCash(balance - JobIncome + Expenses));
             }
         }
+        #endregion
+
+        #region Asset managing
+        private static void DescribeAsset(Asset asset)
+        {
+            Out.WriteLine("  {0}", asset.Name);
+            Out.WriteLine("\tYears of age: {0}", asset.Tracker.YearsOfAge);
+            Out.WriteLine("\tValued at: {0}", FormatCash(asset.Value));
+            Out.WriteLine("\tOriginal value: {0}", FormatCash(asset.Cost));
+            Out.WriteLine("\tDown payment: {0}", FormatCash(asset.DownPayment));
+            Out.WriteLine("\tEquity: {0}", FormatCash(asset.Equity));
+            Out.WriteLine("\tOwnership: {0:F2}%", asset.Tracker.EquityPercentage * 100);
+            Out.WriteLine("\tDebt: {0} \n\t\t[{1}]\n", FormatCash(asset.OutstandingDebt), FormatCash(asset.PrincipalDebt));
+
+
+            Out.WriteLine("\tDTV: {0:F2}%", asset.Tracker.DebtToValue * 100);
+            Out.WriteLine("\tLast year profit margin: {0:F2}%", asset.Tracker.LastYearProfitMargin * 100);
+            Out.WriteLine("\tCash on cash average: {0:F2}%", asset.Tracker.CashOnCashAverage * 100);
+        }
+        static Asset CreateAsset()
+        {
+            Out.Write("Name: ");
+            string name = In.ReadLine();
+            Out.Write("Cost: ");
+            double cost = ReadDouble();
+            Out.Write("Down payment: ");
+            double downPayment = ReadDouble();
+            Out.Write("Years of lease: ");
+            int leasePeriod = ReadValue();
+            Out.Write("Appreciation per year (for 2%, write 0.02): ");
+            double app = ReadDouble();
+            Out.Write("Interest for mortgage (5% => 0.05): ");
+            double interest = ReadDouble();
+            Out.Write("Return per year (rent; standard is 0.07): ");
+            double rpy = ReadDouble();
+
+            Out.Write("Confirmation: ");
+            if (In.ReadLine() == "no")
+                return null;
+
+            return new Asset(name, cost, downPayment, leasePeriod, app, interest, rpy);
+        }
+        public static double AssetsValue
+        {
+            get
+            {
+                return Assets.Sum(a => a.Value);
+            }
+        }
+        public static double LiabilitiesValue
+        {
+            get
+            {
+                return Assets.Sum(a => a.OutstandingDebt);
+            }
+        }
+
+        static bool SellRange()
+        {
+            Out.WriteLine("Warning! Do not sell more than 1000 assets on one occasion!");
+            try
+            {
+                Out.Write("Start index: ");
+                int start = ReadValue();
+                Out.Write("End index: ");
+                int end = ReadValue();
+                if (start < 0 || start > end)// || end > Assets.Count) this last bit comes with a lot of problems
+                    return false;
+                var removing = Assets.Where(asset =>
+                {
+                    // cla x-1
+                    // 123456
+                    // 012345
+                    string str = new string(asset.Name.Skip(asset.Name.LastIndexOf('-') + 1).ToArray());
+                    int id = int.Parse(str);
+                    return start <= id && end >= id;
+                });
+                double totalBalance = 0;
+                int sold = 0, rc = 0;
+                Stopwatch sw = Stopwatch.StartNew();
+                foreach (var asset in removing)
+                {
+                    double debt = asset.PrincipalDebt;
+                    double value_ = asset.Value;
+                    double balance = -debt + value_;
+                    Receive(value_, "\nSold asset " + asset.Name);
+                    //Pay(debt, "Paid off debt of " + asset.Name);
+                    PayTowardsPrincipal(debt, asset);
+                    if (Program.ShowTransactionsOutput)
+                    Out.WriteLine("\tBalance: {0}", FormatCash(balance));
+                    totalBalance += balance;
+                    sold++;
+                }
+                Assets.RemoveAll(a =>
+                {
+                    if (rc == sold)
+                        // this makes sure we don't perform unnecessary checks, if all that should have been sold are sold
+                        // we used to spend minutes here when the list was long
+                        return false;
+                    bool willRemove = removing.Contains(a);
+                    rc = willRemove ? rc + 1 : rc;
+                    return willRemove;
+                });
+                sw.Stop();
+                Out.WriteLine("\n\n\tSold {0} assets for {1}\nTime needed: {2:F2} seconds", sold, FormatCash(totalBalance), sw.Elapsed.TotalSeconds);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Out.WriteLine(e.Message);
+                return false;
+            }
+        }
+
+        static string IVTXT = "";
+        private static void ReadPresetAssets()
+        {
+            PresetAssets.Clear();
+            Func<string, double> parser = s => double.Parse(s);
+            StringBuilder str = new StringBuilder();
+            if (File.Exists("iv.txt"))
+            {
+                Console.WriteLine("Reading from iv.txt:");
+                using (StreamReader reader = new StreamReader("iv.txt"))
+                {
+                    string line;
+                    while (!string.IsNullOrEmpty((line = reader.ReadLine())))
+                    {
+                        Thread.Sleep(10);
+                        string[] data = line.Split('|');
+                        try
+                        {
+                            double cost = parser(data[2]);
+                            double down = parser(data[3]);
+                            int leasePd = (int)parser(data[4]);
+                            double app = parser(data[5]);
+                            double interest = parser(data[6]);
+                            double rpy = parser(data[7]);
+                            PresetAssets.Add(data[0], new Asset(data[1], cost, down, leasePd, app, interest, rpy));
+                            Out.WriteLine("  " + line);
+                            str.AppendLine(line);
+                        }
+                        catch (FormatException e)
+                        {
+                            Out.WriteLine(e.Message);
+                            continue;
+                        }
+                        catch (IndexOutOfRangeException e)
+                        {
+                            Out.WriteLine(e.Message);
+                            continue;
+                        }
+                        catch (ArgumentException e)
+                        {
+                            Out.WriteLine(e.Message);
+                            continue;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Out.WriteLine("iv.txt does not exist");
+                Out.WriteLine("Adding classic building");
+                PresetAssets.Add("X1", new Asset("Bloc X1-{0}", 150000, 40000, 30, 0.03, 0.045, 0.07));
+                str.AppendLine("X1|Bloc X1-{0}|150000|40000|30|0.03|0.045|0.07");
+            }
+            IVTXT = str.ToString();
+        }
+
+        static void BuyAsset(Asset asset)
+        {
+            if (asset.DownPayment <= Cash)
+            {
+                Assets.Add(asset);
+                Pay(asset.DownPayment, "Down payment for " + asset.Name);
+
+                asset.Equity = asset.DownPayment;
+                asset.PrincipalDebt = (asset.Cost - asset.DownPayment);
+                asset.InterestDebt = asset.InitialTotalDebt - asset.PrincipalDebt;
+                asset.Acquired = Now;
+                /*
+                asset.OutstandingDebt = asset.Cost - asset.DownPayment;
+                asset.Equity = asset.DownPayment;
+                asset.InterestDebt = (asset.Cost - asset.DownPayment) * asset.Interest;
+                asset.Acquired = Now;
+                */
+
+                Asset.ODO++;
+            }
+            else Out.WriteLine("Not enough money");
+        }
+        #endregion
+
+        #region Income and expenses
+        static double JobIncome
+        {
+            get
+            {
+                var yearsSinceStart = (Now - Start).TotalDays / 365; 
+                //return 100000;
+                return Math.Min(2245000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
+            }
+        }
+
+        static double Expenses
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.Wine + ExpCat.FunExp + ExpCat.TravelExp + ExpCat.OtherExp;
+            }
+        }
+        static double baseSalary = 70000;
+        static double baseBonus = 10000;
 
         static double Pay(double sum, string whatFor)
         {
             Cash -= sum;
             if (Program.ShowTransactionsOutput)
-                Console.WriteLine(" -{0} was payed for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
+                Out.WriteLine(" -{0} was payed for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
             return sum;
         }
 
@@ -632,7 +660,7 @@ namespace LeverageRECalculator
                 totalPrincipal += towardsPrincipal;
             }
             if (ShowTransactionsOutput)
-                Console.WriteLine("Old interest debt: {0}, new interest debt {1}, savings of {2}", FormatCash(a.InterestDebt), FormatCash(interestDebt), FormatCash(a.InterestDebt - interestDebt));
+                Out.WriteLine("Old interest debt: {0}, new interest debt {1}, savings of {2}", FormatCash(a.InterestDebt), FormatCash(interestDebt), FormatCash(a.InterestDebt - interestDebt));
             a.InterestDebt = interestDebt;
         }
 
@@ -640,10 +668,13 @@ namespace LeverageRECalculator
         {
             Cash += sum;
             if (Program.ShowTransactionsOutput)
-                Console.WriteLine(" +{0} was received for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
+                Out.WriteLine(" +{0} was received for {1}   ==>  {2}", FormatCash(sum), whatFor, FormatCash(Cash));
             return sum;
         }
 
+        #endregion
+
+        #region Text formatting
         public static string FormatCash(double n)
         {
             return string.Format(System.Globalization.CultureInfo.GetCultureInfo("en-US"), "{0:C}", n);
@@ -651,37 +682,14 @@ namespace LeverageRECalculator
 
         static void WriteDouble(double n)
         {
-            Console.WriteLine(FormatCash(n));
-        }
-
-        static void BuyAsset(Asset asset)
-        {
-            if (asset.DownPayment <= Cash)
-            {
-                Assets.Add(asset);
-                Pay(asset.DownPayment, "Down payment for " + asset.Name);
-
-                asset.Equity = asset.DownPayment;
-                asset.PrincipalDebt = (asset.Cost - asset.DownPayment);
-                asset.InterestDebt = asset.InitialTotalDebt - asset.PrincipalDebt;
-                asset.Acquired = Now;
-                /*
-				asset.OutstandingDebt = asset.Cost - asset.DownPayment;
-				asset.Equity = asset.DownPayment;
-				asset.InterestDebt = (asset.Cost - asset.DownPayment) * asset.Interest;
-				asset.Acquired = Now;
-				*/
-
-                Asset.ODO++;
-            }
-            else Console.WriteLine("Not enough money");
+            Out.WriteLine(FormatCash(n));
         }
 
         static int ReadValue()
         {
             try
             {
-                return int.Parse(Console.ReadLine());
+                return int.Parse(In.ReadLine());
             }
             catch
             {
@@ -693,13 +701,15 @@ namespace LeverageRECalculator
         {
             try
             {
-                return double.Parse(Console.ReadLine());
+                return double.Parse(In.ReadLine());
             }
             catch
             {
                 return 0;
             }
         }
+        #endregion
+
 
         static class Texts{ 
             public static string help = 

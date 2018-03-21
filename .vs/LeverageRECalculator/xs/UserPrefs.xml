@@ -1,8 +1,9 @@
 ﻿<Properties StartupConfiguration="{EACFDA37-59C1-4F88-9816-EF3FD2B77E31}|Default">
   <MonoDevelop.Ide.Workbench ActiveDocument="LeverageRECalculator/TransactionLogger.cs">
     <Files>
-      <File FileName="LeverageRECalculator/Program.cs" Line="364" Column="27" />
-      <File FileName="LeverageRECalculator/TransactionLogger.cs" Line="8" Column="13" />
+      <File FileName="LeverageRECalculator/Program.cs" Line="32" Column="31" />
+      <File FileName="LeverageRECalculator/ProgramWrite.cs" Line="32" Column="3" />
+      <File FileName="LeverageRECalculator/TransactionLogger.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
