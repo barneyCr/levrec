@@ -50,6 +50,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Licensing.cs" />
+    <None Include="expenses.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Instructions.txt" />

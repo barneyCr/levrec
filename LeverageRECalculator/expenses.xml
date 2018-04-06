@@ -1,0 +1,17 @@
+<expenses>
+    <expense name="Food" pegged="no">
+        <recurrence>1m</recurrence>
+        <price>2000</price>
+        <increase type="%">10</increase>
+    </expense>
+    <expense name="Fun" pegged="no">
+        <recurrence>1w</recurrence>
+        <price>75</price>
+        <increase type="%">17.5</increase>
+    </expense>
+    <expense name="Clothes" pegged="no">
+        <recurrence>1y </recurrence>
+        <price>1200</price>
+        <increase type="%">5</increase>
+    </expense>
+</expenses>

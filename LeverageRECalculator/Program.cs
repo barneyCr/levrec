@@ -25,23 +25,32 @@ namespace LeverageRECalculator
 
         public static bool ShowTransactionsOutput = true;
         public static bool ShowTimerOutput = false;
-        #endregion
 
-        public static void Main()
-        {
-            DeviateTextStreams();
-            ReadPresetAssets();
+		public static bool SalaryBumps = false;
 
-            Out.Write("\nStarting with: ", FormatCash(Cash));
-            Cash = ReadDouble();
-            Out.WriteLine("\n\n");
+        public static bool AdminMode = false;
+		#endregion
 
-            KeyNow = "X1";
-            while (Cash >= -1000000)
-            {
-                ApplicationAction();
-            }
-        }
+		public static void Main()
+		{
+			DeviateTextStreams();
+			ReadPresetAssets();
+
+
+			Out.Write("\nStarting with: ", FormatCash(Cash));
+			Cash = ReadDouble();
+
+			Out.Write("Salary bumps [ON/OFF]: ");
+			SalaryBumps = In.ReadLine().ToLower() == "on";
+
+			Out.WriteLine("\n\n");
+
+			KeyNow = "X1";
+			while (Cash >= -1000000)
+			{
+				ApplicationAction();
+			}
+		}
 
         #region Action
         private static void ApplicationAction()
@@ -79,256 +88,9 @@ namespace LeverageRECalculator
 
             while (Cash >= 1)
             {
-                #region Handle command
-                Out.WriteLine("\n\nBuy building of type {0}?", KeyNow);
-                Console.WriteLine("\t \"'\" = buy 1, \";\" = buy with all spare cash, \"c\" = create custom building, \"t\"= set type, ENTER = no");
-                string line = In.ReadLine();
-                if (line == "'")
-                {
-                    Asset type = PresetAssets[KeyNow];
-                    Asset myAsset = type.Clone() as Asset;
-                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
-                    BuyAsset(myAsset);
-                }
-                else if (line.StartsWith(";"))
-                {
-                    Asset type = PresetAssets[KeyNow];
-                    double x = 1000;
-                    while (Cash >= type.DownPayment)
-                    {
-                        if ((int)type.DownPayment == 0)
-                        {
-                            if (x-- > 0)
-                                continue;
-                            else break;
-                        }
-                        Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
-                        BuyAsset(myAsset);
-                    }
-                }
-                else if (line == "c")
-                {
-                    Asset newB = CreateAsset();
-                    if (newB == null)
-                        continue;
-
-                    BuyAsset(newB);
-                }
-                else if (line == "t")
-                {
-                    Out.Write("Write asset key: ");
-                    line = In.ReadLine().ToUpper();
-                    Asset type;
-                    if (PresetAssets.TryGetValue(line, out type))
-                    {
-                        Asset myAsset = type.Clone() as Asset;
-                        myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
-                        BuyAsset(myAsset);
-                        KeyNow = line;
-                    }
-                    else
-                    {
-                        Out.WriteLine("Type does not exist in iv.txt");
-                    }
-                }
-                else if (line == "sell")
-                {
-                    Out.Write("Which asset do you want to sell? ");
-                    line = In.ReadLine();
-                    Asset soldAsset = Assets.FirstOrDefault(a => a.Name == line);
-                    if (soldAsset == null)
-                    {
-                        Out.WriteLine("Cannot find an asset named {0}", line);
-                    }
-                    else
-                    {
-                        double debt = soldAsset.PrincipalDebt;
-                        double value_ = soldAsset.Value;
-                        double balance = -debt + value_;
-                        Receive(value_, "Sold asset " + soldAsset.Name + " for " + FormatCash(value_));
-                        //Pay(debt, "Paid off debt of " + FormatCash(debt));
-                        PayTowardsPrincipal(debt, soldAsset);
-                        Out.WriteLine("Balance: {0}", FormatCash(balance));
-
-                        Assets.Remove(soldAsset);
-                    }
-                }
-                else if (line == "sell all")
-                {
-                    Out.WriteLine("Are you sure?");
-                    if (In.ReadLine() == "yes")
-                    {
-                        double totalBalance = 0;
-                        foreach (var asset in Assets)
-                        {
-                            double debt = asset.PrincipalDebt;
-                            double value_ = asset.Value;
-                            double balance = -debt + value_;
-                            Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
-                            //Pay(debt, "Paid off debt of " + FormatCash(debt));
-                            PayTowardsPrincipal(debt, asset);
-                            if(Program.ShowTransactionsOutput)
-                            Out.WriteLine("\tBalance: {0}", FormatCash(balance));
-                            // TODO BALANCE VS PROFIT ?
-                            totalBalance += balance;
-                        }
-                        Assets.Clear();
-                        Out.WriteLine("\n\n\t Total Balance: {0}", FormatCash(totalBalance));
-                    }
-                }
-                else if (line == "sell range")
-                {
-                    if (!SellRange())
-                        continue;
-                }
-                else if (line == "t?")
-                {
-                    Out.WriteLine(IVTXT);
-                }
-                else if (line.StartsWith("pay"))
-                {
-                    Out.WriteLine("Which asset?");
-                    string name = In.ReadLine();
-                    Asset a = Assets.FirstOrDefault(x => x.Name.EndsWith(name));
-                    if (a != null)
-                    {
-                        double sum;
-                        if (line == "pay full")
-                        {
-                            sum = a.PrincipalDebt;
-                        }
-                        else
-                        {
-                            Out.Write("Payment: ");
-                            sum = ReadDouble();
-                        }
-                        PayTowardsPrincipal(sum, a);
-                    }
-                    else
-                    {
-                        Out.WriteLine("Cannot find asset {0}", name);
-                    }
-                }
-                else if (line.StartsWith("is"))
-                {
-                    Out.WriteLine("By how much?");
-
-                    double x = ReadDouble();
-                    if (x == 0)
-                        continue;
-                    ExpCat.OtherExp += x;
-                }
-                else if (line.StartsWith("assets"))
-                {
-                    if (Assets.Count == 0)
-                    {
-                        Out.WriteLine("No assets!");
-                        continue;
-                    }
-                    int breaker = 0;
-                    foreach (var asset in Assets)
-                    {
-                        if (line != "assets verbose")
-                            Out.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
-                        else
-                        {
-                            DescribeAsset(asset);
-                            Out.WriteLine("\n");
-                        }
-                        if (++breaker % 40000 == 0)
-                        {
-                            Out.WriteLine("Operation seems time consuming.");
-                            if (In.ReadLine() != "yes")
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-                else if (line.StartsWith("asset1"))
-                {
-                    try
-                    {
-                        line = line.Substring(7);
-                        if (string.IsNullOrWhiteSpace(line))
-                            continue;
-                        Asset a = Assets.First(x => x.Name.EndsWith(line));
-                        DescribeAsset(a);
-                        Out.WriteLine();
-                    }
-                    catch (Exception e)
-                    {
-                        Out.WriteLine(e.Message);
-                    }
-                }
-                else if (line == "assc")
-                {
-                    Out.WriteLine("You own {0} assets.", Assets.Count);
-                }
-                else if (line == "cash")
-                {
-                    Out.WriteLine("Cash available: {0}", FormatCash(Cash));
-                }
-                else if (line == "cout")
-                {
-                    bool on = Program.ShowTransactionsOutput = !Program.ShowTransactionsOutput;
-                    Out.WriteLine("cout " + (on ? "ON" : "OFF"));
-                }
-                else if (line == "timer")
-                {
-                    bool on = Program.ShowTimerOutput = !Program.ShowTimerOutput;
-                    Out.WriteLine("timer " + (on ? "ON" : "OFF"));
-                }
-                else if (line == "odo-reset")
-                {
-                    Out.WriteLine("Warning! Resetting ODO can result in unexpected problems. Are you sure you want to continue?");
-                    if (In.ReadLine() == "yes")
-                    {
-                        Asset.ODO = 0;
-                        Out.WriteLine("ODO = 0.");
-                    }
-                }
-                else if (line == "hardmoney")
-                {
-                    if (!HardMoneyTransactions.Any())
-                    {
-                        Out.WriteLine("\tHardmoney is a function mainly used for hard money\n" +
-                                          "\tlending simulation or for debugging purposes\n" +
-                                          "\tTo see how it was used type \'showhardmoney\'." +
-                                          "\nYou can now type the amount of money you want to receive.\n" +
-                                          "If you want to pay it back simply input a negative sum.");
-                    }
-                    Out.Write("Amount? ");
-                    double sum = ReadDouble();
-                    Cash += sum;
-                    HardMoneyTransactions.Add(sum);
-                }
-                else if (line == "showhardmoney")
-                {
-                    Out.WriteLine("Hardmoney log:");
-                    HardMoneyTransactions.ForEach(t => Out.WriteLine("\t{0}{1}", t < 0 ? "-" : " ", FormatCash(Math.Abs(t))));
-                    Out.WriteLine("\t--------\n\t== {0}", FormatCash(HardMoneyTransactions.Sum()));
-                    Out.WriteLine();
-                }
-                else if (line == "hardmoney handle")
-                {
-                    double harddebt = HardMoneyTransactions.Sum();
-                    Cash -= harddebt;
-                    HardMoneyTransactions.Add(-harddebt);
-                }
-                else if (line == "help") {
-                    Out.WriteLine(Texts.help);
-                }
-                else if (line == "exit-01") {
-                    Environment.Exit(1);
-                }
-                else if (line != "") {
-                    continue;
-                }
-                else
-                    break;
-                #endregion
+				if (HandleConsoleCommand())
+					continue;
+				break;
             }
 
 
@@ -336,6 +98,292 @@ namespace LeverageRECalculator
             Out.WriteLine("[Press enter to pass another year]");
             In.ReadLine();
         }
+
+        static bool HandleConsoleCommand()
+		{
+            Out.WriteLine("\n\nBuy building of type {0}?", KeyNow);
+            Console.WriteLine("\t \"'\" = buy 1, \";\" = buy with all spare cash, \"c\" = create custom building, \"t\"= set type, ENTER = no");
+            string line = In.ReadLine();
+            if (line == "'")
+            {
+                Asset type = PresetAssets[KeyNow];
+                Asset myAsset = type.Clone() as Asset;
+                myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
+                BuyAsset(myAsset);
+            }
+            else if (line.StartsWith(";"))
+            {
+                Asset type = PresetAssets[KeyNow];
+                double x = 1000;
+                while (Cash >= type.DownPayment)
+                {
+                    if ((int)type.DownPayment == 0)
+                    {
+                        if (x-- > 0)
+                            continue;
+                        else break;
+                    }
+                    Asset myAsset = type.Clone() as Asset;
+                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
+                    BuyAsset(myAsset);
+                }
+            }
+            else if (line == "c")
+            {
+                Asset newB = CreateAsset();
+                if (newB == null)
+                    return true;
+
+                BuyAsset(newB);
+            }
+            else if (line == "t")
+            {
+                Out.Write("Write asset key: ");
+                line = In.ReadLine().ToUpper();
+                Asset type;
+                if (PresetAssets.TryGetValue(line, out type))
+                {
+                    Asset myAsset = type.Clone() as Asset;
+                    myAsset.Name = string.Format(myAsset.Name, Asset.ODO + 1);
+                    BuyAsset(myAsset);
+                    KeyNow = line;
+                }
+                else
+                {
+                    Out.WriteLine("Type does not exist in iv.txt");
+                }
+            }
+            else if (line == "sell")
+            {
+                Out.Write("Which asset do you want to sell? ");
+                line = In.ReadLine();
+                Asset soldAsset = Assets.FirstOrDefault(a => a.Name == line);
+                if (soldAsset == null)
+                {
+                    Out.WriteLine("Cannot find an asset named {0}", line);
+                }
+                else
+                {
+                    double debt = soldAsset.PrincipalDebt;
+                    double value_ = soldAsset.Value;
+                    double balance = -debt + value_;
+                    Receive(value_, "Sold asset " + soldAsset.Name + " for " + FormatCash(value_));
+                    //Pay(debt, "Paid off debt of " + FormatCash(debt));
+                    PayTowardsPrincipal(debt, soldAsset);
+                    Out.WriteLine("Balance: {0}", FormatCash(balance));
+
+                    Assets.Remove(soldAsset);
+                }
+            }
+            else if (line == "sell all")
+            {
+                Out.WriteLine("Are you sure?");
+                if (In.ReadLine() == "yes")
+                {
+                    double totalBalance = 0;
+                    foreach (var asset in Assets)
+                    {
+                        double debt = asset.PrincipalDebt;
+                        double value_ = asset.Value;
+                        double balance = -debt + value_;
+                        Receive(value_, "\nSold asset " + asset.Name + " for " + FormatCash(value_));
+                        //Pay(debt, "Paid off debt of " + FormatCash(debt));
+                        PayTowardsPrincipal(debt, asset);
+                        if (Program.ShowTransactionsOutput)
+                            Out.WriteLine("\tBalance: {0}", FormatCash(balance));
+                        // TODO BALANCE VS PROFIT ?
+                        totalBalance += balance;
+                    }
+                    Assets.Clear();
+                    Out.WriteLine("\n\n\t Total Balance: {0}", FormatCash(totalBalance));
+                }
+            }
+            else if (line == "sell range")
+            {
+                if (!SellRange())
+                    return true;
+            }
+            else if (line == "t?")
+            {
+                Out.WriteLine(IVTXT);
+            }
+            else if (line.StartsWith("pay"))
+            {
+                Out.WriteLine("Which asset?");
+                string name = In.ReadLine();
+                Asset a = Assets.FirstOrDefault(x => x.Name.EndsWith(name));
+                if (a != null)
+                {
+                    double sum;
+                    if (line == "pay full")
+                    {
+                        sum = a.PrincipalDebt;
+                    }
+                    else
+                    {
+                        Out.Write("Payment: ");
+                        sum = ReadDouble();
+                    }
+                    PayTowardsPrincipal(sum, a);
+                }
+                else
+                {
+                    Out.WriteLine("Cannot find asset {0}", name);
+                }
+            }
+            else if (line.StartsWith("is"))
+            {
+                Out.WriteLine("By how much?");
+
+                double x = ReadDouble();
+                if (x == 0)
+                    return true;
+                ExpCat.OtherExp += x;
+            }
+            else if (line.StartsWith("assets"))
+            {
+                if (Assets.Count == 0)
+                {
+                    Out.WriteLine("No assets!");
+                    return true;
+                }
+                int breaker = 0;
+                foreach (var asset in Assets)
+                {
+                    if (line != "assets verbose")
+                        Out.WriteLine("{0}  = Valued at: {1}, original value: {2}, bought with {3}, total debt of {4}", asset.Name, FormatCash(asset.Value), FormatCash(asset.Cost), FormatCash(asset.DownPayment), FormatCash(asset.OutstandingDebt));
+                    else
+                    {
+                        DescribeAsset(asset);
+                        Out.WriteLine("\n");
+                    }
+                    if (++breaker % 40000 == 0)
+                    {
+                        Out.WriteLine("Operation seems time consuming.");
+                        if (In.ReadLine() != "yes")
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (line.StartsWith("asset1"))
+            {
+                try
+                {
+                    line = line.Substring(7);
+                    if (string.IsNullOrWhiteSpace(line))
+                        return true;
+                    Asset a = Assets.First(x => x.Name.EndsWith(line));
+                    DescribeAsset(a);
+                    Out.WriteLine();
+                }
+                catch (Exception e)
+                {
+                    Out.WriteLine(e.Message);
+                }
+            }
+            else if (line == "assc")
+            {
+                Out.WriteLine("You own {0} assets.", Assets.Count);
+            }
+            else if (line == "cash")
+            {
+                Out.WriteLine("Cash available: {0}", FormatCash(Cash));
+            }
+            else if (line == "cout")
+            {
+                bool on = Program.ShowTransactionsOutput = !Program.ShowTransactionsOutput;
+                Out.WriteLine("cout " + (on ? "ON" : "OFF"));
+            }
+            else if (line == "timer")
+            {
+                bool on = Program.ShowTimerOutput = !Program.ShowTimerOutput;
+                Out.WriteLine("timer " + (on ? "ON" : "OFF"));
+            }
+            else if (line == "odo-reset")
+            {
+                Out.WriteLine("Warning! Resetting ODO can result in unexpected problems. Are you sure you want to continue?");
+                if (In.ReadLine() == "yes")
+                {
+                    Asset.ODO = 0;
+                    Out.WriteLine("ODO = 0.");
+                }
+            }
+            else if (line == "hardmoney")
+            {
+                if (!HardMoneyTransactions.Any())
+                {
+                    Out.WriteLine("\tHardmoney is a function mainly used for hard money\n" +
+                                      "\tlending simulation or for debugging purposes\n" +
+                                      "\tTo see how it was used type \'showhardmoney\'." +
+                                      "\nYou can now type the amount of money you want to receive.\n" +
+                                      "If you want to pay it back simply input a negative sum.");
+                }
+                Out.Write("Amount? ");
+                double sum = ReadDouble();
+                Cash += sum;
+                HardMoneyTransactions.Add(sum);
+            }
+            else if (line == "showhardmoney")
+            {
+                Out.WriteLine("Hardmoney log:");
+                HardMoneyTransactions.ForEach(t => Out.WriteLine("\t{0}{1}", t < 0 ? "-" : " ", FormatCash(Math.Abs(t))));
+                Out.WriteLine("\t--------\n\t== {0}", FormatCash(HardMoneyTransactions.Sum()));
+                Out.WriteLine();
+            }
+            else if (line == "hardmoney handle")
+            {
+                double harddebt = HardMoneyTransactions.Sum();
+                Cash -= harddebt;
+                HardMoneyTransactions.Add(-harddebt);
+            }
+            else if (line == "help")
+            {
+                Out.WriteLine(Texts.help);
+            }
+            else if (line == "clear")
+            {
+                Console.Clear();
+            }
+            else if (line == "gc.collect()")
+            {
+                GC.Collect();
+                Console.WriteLine("OK");
+            }
+            else if (line == "i-am-admin")
+            {
+                Program.AdminMode = true;
+                Out.WriteLine("Admin mode on.");
+            }
+            else if (line == "admin-out")
+            {
+                Program.AdminMode = false;
+                Out.WriteLine("Admin out of role.");
+            }
+            else if (line == "flush")
+            {
+                Out.Flush();
+            }
+			else if (line == "salarybumps")
+			{
+				SalaryBumps = !SalaryBumps;
+				Console.WriteLine(SalaryBumps ? "ON" : "OFF");
+			}
+            else if (line == "exit-01")
+            {
+                Environment.Exit(1);
+            }
+            
+            else if (line != "")
+            {
+                return true;
+            }
+            else
+                return false;
+			return true;
+		} 
+
         static void PassTime(TimeSpan time)
         {
             int yearsPassed = (int)time.TotalDays / 365;
@@ -590,23 +638,28 @@ namespace LeverageRECalculator
         #endregion
 
         #region Income and expenses
+        
         static double JobIncome
-        {
-            get
-            {
-                var yearsSinceStart = (Now - Start).TotalDays / 365; 
-                //return 100000;
-                return Math.Min(2245000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
-            }
-        }
+		{
+			get
+			{
+				var yearsSinceStart = (Now - Start).TotalDays / 365;
+				if (SalaryBumps == false)
+					return 100000;
+				else
+					return Math.Min(2245000, Math.Pow(1.06, yearsSinceStart) * baseSalary + Math.Pow(1.08, yearsSinceStart) * baseBonus);
+			}
+		}
 
         static double Expenses
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
-            {
-                return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.Wine + ExpCat.FunExp + ExpCat.TravelExp + ExpCat.OtherExp;
-            }
+			{
+				if (SalaryBumps == false)
+					return 100000;
+				return ExpCat.RentExp + ExpCat.FoodExp + ExpCat.CarExp + ExpCat.GasExp + ExpCat.ClothesExp + ExpCat.Wine + ExpCat.FunExp + ExpCat.TravelExp + ExpCat.OtherExp;
+			}
         }
         static double baseSalary = 70000;
         static double baseBonus = 10000;
@@ -755,7 +808,10 @@ showhardmoney => hardmoney transactions log
 hardmoney handle => pays back all money that
            was taken using the cheat code
            (if you have already paid a portion,
-           it will only pay the remaining amount)";
+           it will only pay the remaining amount)
+clear => clear console screen
+gc.collect() => run memory garbage collection
+    (internal functions)";
                     }
 
 
