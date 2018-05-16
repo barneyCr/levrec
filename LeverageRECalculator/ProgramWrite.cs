@@ -13,7 +13,7 @@ namespace LeverageRECalculator
                 Directory.CreateDirectory("logs");
             }
             Program.Out = new OutStream("logs/" + DateTime.Now.DayOfWeek.ToString() + " - " + DateTime.Now.ToShortTimeString() + ".txt");
-            Program.In = new InStream(Program.Out);
+			Program.In = new InStream(Program.Out);
         }
     }
 

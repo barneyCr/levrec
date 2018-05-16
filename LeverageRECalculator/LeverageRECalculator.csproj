@@ -36,17 +36,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Asset.cs" />
     <Compile Include="AssetTracker.cs" />
-    <Compile Include="Properties\Resources.Designer.cs">
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
     <Compile Include="TransactionLogger.cs" />
     <Compile Include="ProgramWrite.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="Licensing.cs" />

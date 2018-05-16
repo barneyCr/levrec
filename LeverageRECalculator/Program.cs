@@ -683,7 +683,7 @@ namespace LeverageRECalculator
             a.PrincipalDebt -= sum;
             a.Equity += sum;
             a.Tracker.OnPaymentMade(0, sum);
-
+   
             // we also have to recalculate the interest debt
             /* DOES NOT WORK
             double payment = a.PeriodicPayment(a.LeasePeriod);
